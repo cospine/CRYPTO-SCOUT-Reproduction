@@ -7,16 +7,19 @@
 ## 📂 目录结构
 
 ```text
-.
-├── reproduction/
-│   ├── contracts/          # 复现实验所用的 Solidity 源码
+Crypto-Scout-Reproduction/
+├── README.md               
+├── static_analysis/        
+│   ├── contracts/          
 │   │   ├── FakeDeposit.sol
 │   │   └── NestedMapping.sol
-│   └── bytecode/           # 编译后的运行时字节码 (Runtime Bytecode)
-│       ├── FakeDeposit.hex
-│       └── NestedMapping.hex
-├── Dockerfile              # 构建实验环境
-└── README.md               # 项目说明文档
+│   ├── bytecode/           
+│   └── results/            
+└── dynamic_analysis/       
+    ├── logs/               
+    │   ├── p3_stolen_report.txt
+    │   └── p4_inconsistent_report.txt
+    └── reproduction_notes.md
 ```
 
 ## 🛠 环境配置与依赖

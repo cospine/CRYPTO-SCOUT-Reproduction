@@ -1,0 +1,1 @@
+{"pattern": {"lang": "solidity", "type": "p1", "erc": "erc20"}, "plugin": {"fake_deposit": false, "fake_notification": false}}

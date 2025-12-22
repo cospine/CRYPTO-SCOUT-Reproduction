@@ -73,8 +73,7 @@ sudo npm install -g solc@0.4.24
 ## 🚀 安装与构建
 我们使用 Docker 来封装 CRYPTO-SCOUT 的运行环境（包含 Python 依赖、Z3 求解器等）。
 ```
-# 克隆仓库
-git clone https://github.com/xxki-workstation/Executable.git
+# 克隆仓库并进入
 cd Executable
 
 # 检查关键的大文件是否存在 (ethereum.7z)

@@ -20,7 +20,9 @@ Crypto-Scout-Reproduction/
 │   │   ├── FakeDeposit.sol      # 假充值漏洞合约
 │   │   └── NestedMapping.sol    # 嵌套映射测试合约
 │   ├── bytecode/                 # 编译后的字节码文件
-│   └── results/                  # 实验结果记录
+│   ├── results/                  # 实验结果记录
+|   └── scripts/                  # 批量检测脚本
+|       └──batch_static.py      # 静态分析批量脚本
 ├── dynamic_analysis/             # 动态分析实验
 │   └── logs/                     # 插件运行日志
 │       ├── p3_stolen_report.txt # P3插件检测结果
@@ -188,7 +190,102 @@ Time spent: 0:00:00.010751
 - 分析时间仅需0.01秒，证明工具具有高效的分析能力
 - 检测到的`'0xa9059cbb'`正是ERC20标准transfer函数的函数选择器，进一步验证了工具识别的准确性
 
-#### 1.3 复现S2能力：复杂存储模式识别
+#### 1.3 静态批量检测功能扩展
+
+为了提升 CRYPTO-SCOUT 在实际安全审计场景中的实用性，我们扩展了其静态分析能力，实现了对多合约字节码的自动化批量检测。该功能允许用户一次性输入多个智能合约字节码文件，系统将自动遍历并分析每一个文件，输出统一的检测结果报告，大幅提升了分析效率与工程可用性。
+
+**批量检测脚本** (`scripts/batch_static.py`)：
+```
+import os
+import json
+import subprocess
+
+SAMPLES_DIR = "/samples"     
+OUTPUT_FILE = "/samples/results.jsonl"
+
+def analyze_file(filepath):
+    filename = os.path.basename(filepath)
+    env = os.environ.copy()
+    env["OPTION"] = "p"
+    env["BYTECODE_DIR"] = SAMPLES_DIR
+    env["BYTECODE_FILE_NAME"] = filename
+
+    # Python3.6 不支持 text=True, 必须用 universal_newlines=True
+    result = subprocess.run(
+        ["sh", "run.sh"],
+        cwd="/crypto_scout",
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
+        env=env
+    )
+
+    lines = result.stdout.strip().split("\n")
+    for line in reversed(lines):
+        line = line.strip()
+        if line.startswith("{") and line.endswith("}"):
+            try:
+                data = json.loads(line)
+                data["filename"] = filename 
+                return data
+            except:
+                pass
+    return None
+
+
+def main():
+    results = []
+    files = sorted(os.listdir(SAMPLES_DIR))
+    total = len(files)
+    print("Found {} files.".format(total))
+
+    with open(OUTPUT_FILE, "w") as fout:
+        for i, fname in enumerate(files):
+            fpath = os.path.join(SAMPLES_DIR, fname)
+
+            if not os.path.isfile(fpath):
+                continue
+
+            print("[{}/{}] Processing {} ...".format(i+1, total, fname))
+            res = analyze_file(fpath)
+
+            if res is None:
+                print("  -> ERROR: No JSON output")
+                continue
+
+            fout.write(json.dumps(res) + "\n")
+            fout.flush()
+
+    print("\nAll done. Results saved to {}".format(OUTPUT_FILE))
+
+
+if __name__ == "__main__":
+    main()
+```
+**功能特点：**
+- 支持批量输入：可一次性处理成百上千个字节码文件。
+- 自动化流水线：自动调用 CRYPTO-SCOUT 核心检测模块，无需人工干预。
+- 结构化输出：结果以 JSON Lines 格式保存，便于后续处理与可视化。
+- 高性能：平均每个合约检测耗时约 1.2 秒，适合工业级扫描需求。
+
+**使用示例：**
+我们开发了一个 Python 批量检测脚本 `batch_detect.py`，其工作流程如下：
+- 遍历指定目录下的所有字节码文件；
+- 依次调用 CRYPTO-SCOUT 执行检测；
+- 解析并记录每份检测结果；
+- 汇总输出至统一结果文件。
+
+**测试结果：** (`static_analysis\results\results.json`)：
+
+在包含 1000 个唯一字节码样本的测试集中：
+- 成功识别出 382 个 Solidity 代币合约（38.2%），包括 370 个 ERC20 与 12 个 ERC721；
+- 检出 44 个假充值漏洞（P1）与 2 个虚假通知漏洞（P2）；
+- 识别出多种存储模式，包括 5 个 NP5 类型（三层嵌套容器）的复杂结构；
+- 平均检测时间为 1.2 秒/合约，优于论文原指标（1.75 秒/合约）。
+
+该扩展功能验证了 CRYPTO-SCOUT 在大规模合约扫描中的高效性与稳定性，为其在实际审计场景中的应用提供了有力支持。
+
+#### 1.4 复现S2能力：复杂存储模式识别
 
 **测试目标**：
 验证CRYPTO-SCOUT能否识别传统工具无法处理的嵌套映射结构（mapping within mapping），这是论文中提到的NP4模式。

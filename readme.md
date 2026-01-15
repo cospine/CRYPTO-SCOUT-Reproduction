@@ -195,7 +195,7 @@ Time spent: 0:00:00.010751
 为了提升 CRYPTO-SCOUT 在实际安全审计场景中的实用性，我们扩展了其静态分析能力，实现了对多合约字节码的自动化批量检测。该功能允许用户一次性输入多个智能合约字节码文件，系统将自动遍历并分析每一个文件，输出统一的检测结果报告，大幅提升了分析效率与工程可用性。
 
 **批量检测脚本** (`scripts/batch_static.py`)：
-```
+```python
 import os
 import json
 import subprocess
